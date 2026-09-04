@@ -5,6 +5,7 @@ type Status = 'Not started' | 'In progress' | 'Complete' | 'Overdue'
 type Priority = 'High' | 'Medium' | 'Low'
 type Course = { id: string; name: string; code: string; instructor: string; color: string }
 type Assignment = { id: string; title: string; courseId: string; due: string; priority: Priority; status: Status; grade?: number }
+type TermData = { courses: Course[]; assignments: Assignment[] }
 
 const seedCourses: Course[] = [
   { id: 'cs319', name: 'Web Application Development', code: 'CS 319', instructor: 'Dr. Maya Patel', color: '#e87a5d' },
@@ -22,15 +23,45 @@ const id = () => Math.random().toString(36).slice(2, 9)
 const blankAssignment: Omit<Assignment, 'id'> = { title: '', courseId: 'cs319', due: '', priority: 'Medium', status: 'Not started' }
 
 function App() {
-  const [courses, setCourses] = useState<Course[]>(() => JSON.parse(localStorage.getItem('study-courses') || 'null') || seedCourses)
-  const [assignments, setAssignments] = useState<Assignment[]>(() => JSON.parse(localStorage.getItem('study-assignments') || 'null') || seedAssignments)
+  const [terms, setTerms] = useState<Record<string, TermData>>(() => {
+    const savedTerms = JSON.parse(localStorage.getItem('study-terms') || 'null') as Record<string, TermData> | null
+    if (savedTerms) return savedTerms
+    return { 'Fall 2026': { courses: JSON.parse(localStorage.getItem('study-courses') || 'null') || seedCourses, assignments: JSON.parse(localStorage.getItem('study-assignments') || 'null') || seedAssignments } }
+  })
+  const [currentTerm, setCurrentTerm] = useState(() => localStorage.getItem('study-current-term') || 'Fall 2026')
   const [activeView, setActiveView] = useState<'overview' | 'courses'>('overview')
   const [filter, setFilter] = useState<'All' | Status>('All')
   const [modal, setModal] = useState<{ type: 'course' | 'assignment'; data: Course | Assignment | null } | null>(null)
   const [accountOpen, setAccountOpen] = useState(false)
+  const [currentDate, setCurrentDate] = useState(() => localStorage.getItem('study-current-date') || '2026-09-04')
 
-  useEffect(() => { localStorage.setItem('study-courses', JSON.stringify(courses)) }, [courses])
-  useEffect(() => { localStorage.setItem('study-assignments', JSON.stringify(assignments)) }, [assignments])
+  const activeTerm = terms[currentTerm] || { courses: [], assignments: [] }
+  const courses = activeTerm.courses
+  const assignments = activeTerm.assignments
+  function setCourses(updater: Course[] | ((items: Course[]) => Course[])) {
+    setTerms((items) => { const term = items[currentTerm] || { courses: [], assignments: [] }; const nextCourses = typeof updater === 'function' ? updater(term.courses) : updater; return { ...items, [currentTerm]: { ...term, courses: nextCourses } } })
+  }
+  function setAssignments(updater: Assignment[] | ((items: Assignment[]) => Assignment[])) {
+    setTerms((items) => { const term = items[currentTerm] || { courses: [], assignments: [] }; const nextAssignments = typeof updater === 'function' ? updater(term.assignments) : updater; return { ...items, [currentTerm]: { ...term, assignments: nextAssignments } } })
+  }
+  useEffect(() => { localStorage.setItem('study-terms', JSON.stringify(terms)); localStorage.setItem('study-current-term', currentTerm) }, [terms, currentTerm])
+  useEffect(() => { if (!terms[currentTerm]) setTerms((items) => ({ ...items, [currentTerm]: { courses: [], assignments: [] } })) }, [currentTerm, terms])
+  useEffect(() => { localStorage.setItem('study-current-date', currentDate) }, [currentDate])
+  useEffect(() => {
+    setAssignments((items) => items.map((item) => item.status !== 'Complete' && item.due < currentDate ? { ...item, status: 'Overdue' } : item))
+  }, [currentDate, currentTerm])
+
+  function selectTerm(term: string) {
+    setCurrentTerm(term)
+    setActiveView('overview')
+    setFilter('All')
+  }
+  function createTerm() {
+    const name = window.prompt('Name this term', 'Spring 2027')?.trim()
+    if (!name) return
+    if (!terms[name]) setTerms((items) => ({ ...items, [name]: { courses: [], assignments: [] } }))
+    selectTerm(name)
+  }
 
   const completed = assignments.filter((item) => item.status === 'Complete').length
   const dueSoon = assignments.filter((item) => item.status !== 'Complete').length
@@ -46,9 +77,11 @@ function App() {
   }
   function saveAssignment(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); const form = new FormData(event.currentTarget); const existing = modal?.data as Assignment | null
-    const status = form.get('status') as Status
+    const selectedStatus = form.get('status') as Status
+    const due = String(form.get('due'))
+    const status = selectedStatus !== 'Complete' && due < currentDate ? 'Overdue' : selectedStatus
     const gradeValue = Number(form.get('grade'))
-    const assignment: Assignment = { id: existing?.id || id(), title: String(form.get('title')), courseId: String(form.get('courseId')), due: String(form.get('due')), priority: form.get('priority') as Priority, status, ...(status === 'Complete' && Number.isFinite(gradeValue) && gradeValue >= 0 && gradeValue <= 100 ? { grade: gradeValue } : {}) }
+    const assignment: Assignment = { id: existing?.id || id(), title: String(form.get('title')), courseId: String(form.get('courseId')), due, priority: form.get('priority') as Priority, status, ...(status === 'Complete' && Number.isFinite(gradeValue) && gradeValue >= 0 && gradeValue <= 100 ? { grade: gradeValue } : {}) }
     setAssignments((items) => existing ? items.map((item) => item.id === existing.id ? assignment : item) : [...items, assignment]); setModal(null)
   }
   function removeCourse(courseId: string) { if (confirm('Delete this course and its assignments?')) { setCourses((items) => items.filter((item) => item.id !== courseId)); setAssignments((items) => items.filter((item) => item.courseId !== courseId)) } }
@@ -58,12 +91,12 @@ function App() {
   return <div className="app-shell">
     <aside className="sidebar">
       <div className="brand"><span className="brand-mark"><BookOpen size={18} /></span><span>study<span className="brand-accent">/</span>space</span></div>
-      <div className="term-card"><span className="eyebrow">CURRENT TERM</span><strong>Fall 2026</strong><span className="term-dot">●  Week 03 of 15</span></div>
+      <div className="term-card"><span className="eyebrow">CURRENT TERM</span><select className="term-select" value={currentTerm} onChange={(event) => selectTerm(event.target.value)} aria-label="Select current term">{Object.keys(terms).map((term) => <option key={term}>{term}</option>)}</select><button className="new-term-button" onClick={createTerm}><Plus size={13} /> New term</button><span className="term-dot">●  Week 03 of 15</span></div>
       <nav><button className={activeView === 'overview' ? 'nav-item active' : 'nav-item'} onClick={() => setActiveView('overview')}><LayoutDashboard size={17} /> Overview</button><button className={activeView === 'courses' ? 'nav-item active' : 'nav-item'} onClick={() => setActiveView('courses')}><BookOpen size={17} /> My courses <span className="nav-count">{courses.length}</span></button><button className="nav-item" onClick={() => { setActiveView('overview'); requestAnimationFrame(() => document.getElementById('assignments')?.scrollIntoView({ behavior: 'smooth' })) }}><ListTodo size={17} /> Assignments <span className="nav-count">{assignments.length}</span></button></nav>
       <div className="sidebar-bottom"><div className="tip"><Flame size={16} /><span><b>Keep your streak</b><br />You have 4 focused days.</span></div><div className="account-menu"><button className={accountOpen ? 'profile open' : 'profile'} onClick={() => setAccountOpen((open) => !open)} aria-expanded={accountOpen} aria-haspopup="menu"><div className="avatar">AR</div><div><b>Alex Rivera</b><small>Computer Science</small></div><ChevronDown size={15} /></button>{accountOpen && <div className="account-dropdown" role="menu"><button role="menuitem" onClick={() => setAccountOpen(false)}><UserRound size={15} /> Profile</button><button role="menuitem" onClick={() => setAccountOpen(false)}><Settings size={15} /> Settings</button><div className="menu-divider" /><button role="menuitem" onClick={() => setAccountOpen(false)}><LogOut size={15} /> Sign out</button></div>}</div></div>
     </aside>
     <main className="main-content">
-      <header className="topbar"><div><span className="eyebrow">FRIDAY, SEPTEMBER 04, 2026</span><h1>{activeView === 'overview' ? 'Good morning, Alex.' : 'My courses'}</h1></div><button className="primary-button" onClick={() => setModal({ type: 'assignment', data: null })}><Plus size={17} /> Add assignment</button></header>
+      <header className="topbar"><div><label className="current-day"><CalendarDays size={13} /> CURRENT DAY <input type="date" value={currentDate} onChange={(event) => setCurrentDate(event.target.value)} /></label><h1>{activeView === 'overview' ? 'Good morning, Alex.' : 'My courses'}</h1></div><button className="primary-button" onClick={() => setModal({ type: 'assignment', data: null })}><Plus size={17} /> Add assignment</button></header>
       {activeView === 'overview' ? <>
         <section className="hero-row"><div><p className="lede">A clear mind starts with a clear plan.</p><div className="progress-line"><span style={{ width: `${Math.max(progress, 7)}%` }} /></div><small>{progress}% of your assignments completed</small></div><div className="week-box"><CalendarDays size={17} /><span><b>This week</b><br />{dueSoon} active assignments</span></div></section>
         <section className="stats-grid"><div className="stat-card coral"><span>ASSIGNMENTS DUE</span><strong>{dueSoon}</strong><small>Keep the momentum going</small></div><div className="stat-card teal"><span>COMPLETED</span><strong>{completed}</strong><small>{completed ? 'Nice work so far' : 'Your first win is waiting'}</small></div><div className="stat-card yellow"><span>COURSES</span><strong>{courses.length}</strong><small>Across your fall term</small></div><div className="stat-card grade"><span>AVERAGE GRADE</span><strong>{averageGrade === null ? '--' : `${averageGrade}%`}</strong><small>{gradedAssignments.length ? `From ${gradedAssignments.length} graded assignment${gradedAssignments.length === 1 ? '' : 's'}` : 'Grade completed work to begin'}</small></div></section>

@@ -26,3 +26,11 @@
 .grade { background: #e7e2f1; color: #69568a; }
 .status-overdue { color: #a34f4a; background: #f9e1df; }
 .field-hint { color: #9aa39e; font-size: 10px; font-weight: 400; }
+.term-select { width: 100%; border: 0; background: transparent; color: #fff; font: 600 17px 'Space Grotesk'; padding: 0; outline-color: #9dc3b7; }
+.term-select option { color: #273331; background: #fff; }
+.new-term-button { border: 0; background: transparent; color: #adc4bb; display: inline-flex; align-items: center; gap: 5px; padding: 0; font-size: 11px; }
+.new-term-button:hover { color: #fff; }
+.current-day { display: inline-flex; align-items: center; gap: 6px; color: #7d8983; font-size: 10px; font-weight: 700; letter-spacing: 1.1px; }
+.current-day svg { color: var(--teal); }
+.current-day input { border: 0; background: transparent; color: #5f6c67; font-size: 11px; font-weight: 600; letter-spacing: 0; padding: 2px 0; }
+.current-day input:focus { outline: 2px solid #b8d5cb; outline-offset: 3px; border-radius: 3px; }
