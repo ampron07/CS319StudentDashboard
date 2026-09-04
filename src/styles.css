@@ -24,6 +24,8 @@
 .account-dropdown button:last-child:hover { color: #bd5946; background: #fff0eb; }
 .menu-divider { height: 1px; background: #e7ece7; margin: 4px 5px; }
 .grade { background: #e7e2f1; color: #69568a; }
+.overdue { background: #f7dddd; color: #a34f4a; }
+.total-week { background: #dfe9ef; color: #4e6f82; }
 .status-overdue { color: #a34f4a; background: #f9e1df; }
 .field-hint { color: #9aa39e; font-size: 10px; font-weight: 400; }
 .term-select { width: 100%; border: 0; background: transparent; color: #fff; font: 600 17px 'Space Grotesk'; padding: 0; outline-color: #9dc3b7; }
