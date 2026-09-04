@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { BookOpen, CalendarDays, Check, ChevronDown, Clock3, Edit3, Flame, LayoutDashboard, ListTodo, Plus, Trash2, X } from 'lucide-react'
+import { BookOpen, CalendarDays, Check, ChevronDown, Clock3, Edit3, Flame, LayoutDashboard, ListTodo, LogOut, Plus, Settings, Trash2, UserRound, X } from 'lucide-react'
 
 type Status = 'Not started' | 'In progress' | 'Complete'
 type Priority = 'High' | 'Medium' | 'Low'
@@ -27,6 +27,7 @@ function App() {
   const [activeView, setActiveView] = useState<'overview' | 'courses'>('overview')
   const [filter, setFilter] = useState<'All' | Status>('All')
   const [modal, setModal] = useState<{ type: 'course' | 'assignment'; data: Course | Assignment | null } | null>(null)
+  const [accountOpen, setAccountOpen] = useState(false)
 
   useEffect(() => { localStorage.setItem('study-courses', JSON.stringify(courses)) }, [courses])
   useEffect(() => { localStorage.setItem('study-assignments', JSON.stringify(assignments)) }, [assignments])
@@ -54,8 +55,8 @@ function App() {
     <aside className="sidebar">
       <div className="brand"><span className="brand-mark"><BookOpen size={18} /></span><span>study<span className="brand-accent">/</span>space</span></div>
       <div className="term-card"><span className="eyebrow">CURRENT TERM</span><strong>Fall 2026</strong><span className="term-dot">●  Week 03 of 15</span></div>
-      <nav><button className={activeView === 'overview' ? 'nav-item active' : 'nav-item'} onClick={() => setActiveView('overview')}><LayoutDashboard size={17} /> Overview</button><button className={activeView === 'courses' ? 'nav-item active' : 'nav-item'} onClick={() => setActiveView('courses')}><BookOpen size={17} /> My courses <span className="nav-count">{courses.length}</span></button><button className="nav-item" onClick={() => document.getElementById('assignments')?.scrollIntoView({ behavior: 'smooth' })}><ListTodo size={17} /> Assignments <span className="nav-count">{assignments.length}</span></button></nav>
-      <div className="sidebar-bottom"><div className="tip"><Flame size={16} /><span><b>Keep your streak</b><br />You have 4 focused days.</span></div><div className="profile"><div className="avatar">AR</div><div><b>Alex Rivera</b><small>Computer Science</small></div><ChevronDown size={15} /></div></div>
+      <nav><button className={activeView === 'overview' ? 'nav-item active' : 'nav-item'} onClick={() => setActiveView('overview')}><LayoutDashboard size={17} /> Overview</button><button className={activeView === 'courses' ? 'nav-item active' : 'nav-item'} onClick={() => setActiveView('courses')}><BookOpen size={17} /> My courses <span className="nav-count">{courses.length}</span></button><button className="nav-item" onClick={() => { setActiveView('overview'); requestAnimationFrame(() => document.getElementById('assignments')?.scrollIntoView({ behavior: 'smooth' })) }}><ListTodo size={17} /> Assignments <span className="nav-count">{assignments.length}</span></button></nav>
+      <div className="sidebar-bottom"><div className="tip"><Flame size={16} /><span><b>Keep your streak</b><br />You have 4 focused days.</span></div><div className="account-menu"><button className={accountOpen ? 'profile open' : 'profile'} onClick={() => setAccountOpen((open) => !open)} aria-expanded={accountOpen} aria-haspopup="menu"><div className="avatar">AR</div><div><b>Alex Rivera</b><small>Computer Science</small></div><ChevronDown size={15} /></button>{accountOpen && <div className="account-dropdown" role="menu"><button role="menuitem" onClick={() => setAccountOpen(false)}><UserRound size={15} /> Profile</button><button role="menuitem" onClick={() => setAccountOpen(false)}><Settings size={15} /> Settings</button><div className="menu-divider" /><button role="menuitem" onClick={() => setAccountOpen(false)}><LogOut size={15} /> Sign out</button></div>}</div></div>
     </aside>
     <main className="main-content">
       <header className="topbar"><div><span className="eyebrow">FRIDAY, SEPTEMBER 04, 2026</span><h1>{activeView === 'overview' ? 'Good morning, Alex.' : 'My courses'}</h1></div><button className="primary-button" onClick={() => setModal({ type: 'assignment', data: null })}><Plus size={17} /> Add assignment</button></header>
